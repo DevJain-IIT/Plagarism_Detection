@@ -1,0 +1,8 @@
+dataset
+results/*
+!results/head.pt
+tests
+*.pkl
+*.ipynb
+code
+__pycache__

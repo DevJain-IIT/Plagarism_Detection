@@ -1,0 +1,31 @@
+{
+  "features": [
+    "tfidf_cosine",
+    "jaccard",
+    "len_ratio_chars",
+    "len_ratio_tokens",
+    "shared_1gram",
+    "shared_2gram",
+    "shared_3gram",
+    "cand_covered",
+    "src_covered"
+  ],
+  "val": {
+    "pair_features_xgb": {
+      "acc": 0.7053364904260706,
+      "recall_1": 0.6661088095695356,
+      "auc": 0.7768335299740798
+    },
+    "pair_features+tfidf_xgb": {
+      "acc": 0.8150363385023883,
+      "recall_1": 0.8134105188071004,
+      "auc": 0.9002886182026416
+    }
+  },
+  "best": "pair_features+tfidf_xgb",
+  "test": {
+    "acc": 0.8120569309630276,
+    "recall_1": 0.8124402175398322,
+    "auc": 0.8979600958813133
+  }
+}

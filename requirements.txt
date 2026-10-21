@@ -1,0 +1,9 @@
+-r requirements-serve.txt
+pandas==2.2.2
+scikit-learn==1.8.0
+scipy==1.17.1
+xgboost==3.4.1
+nltk==3.10.3
+streamlit==1.50.0
+pytest==9.0.3
+httpx==0.28.1
