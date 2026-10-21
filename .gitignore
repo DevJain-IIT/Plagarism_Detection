@@ -2,6 +2,5 @@ dataset/train_snli.txt
 results/*
 !results/head.pt
 !results/*.json
-notes/
 __pycache__/
 .pytest_cache/

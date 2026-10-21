@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import api  # noqa: E402
-from plag.features import FEATURE_NAMES, PairFeatures  # noqa: E402
-from plag.model import HEAD_FILE  # noqa: E402
+import api
+from plag.features import FEATURE_NAMES, PairFeatures
+from plag.model import HEAD_FILE
 
 
 class FakeDetector:

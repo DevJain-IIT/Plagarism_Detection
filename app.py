@@ -2,7 +2,7 @@ import streamlit as st
 
 from plag.model import THRESHOLD, Detector
 
-st.set_page_config(page_title="Semantic Plagiarism Detection", page_icon="🔍")
+st.set_page_config(page_title="Semantic Plagiarism Detection")
 
 
 @st.cache_resource
