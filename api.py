@@ -12,7 +12,7 @@ class Pair(BaseModel):
     candidate: str = Field(min_length=1, max_length=2000)
 
 
-class Verdict(BaseModel):
+class Result(BaseModel):
     plagiarised: bool
     score: float
     latency_ms: float
@@ -20,7 +20,8 @@ class Verdict(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    app.state.detector = Detector()  # load once, not per request
+    # load the model once when the server starts, not on every request
+    app.state.detector = Detector()
     app.state.detector.score("warm up", "warm up")
     yield
 
@@ -37,9 +38,10 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/predict", response_model=Verdict)
+@app.post("/predict", response_model=Result)
 def predict(pair: Pair, detector=Depends(get_detector)):
-    t = time.perf_counter()
+    start = time.perf_counter()
     score = detector.score(pair.source, pair.candidate)
-    return Verdict(plagiarised=score >= THRESHOLD, score=round(score, 4),
-                   latency_ms=round((time.perf_counter() - t) * 1000, 2))
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    return Result(plagiarised=score >= THRESHOLD, score=round(score, 4),
+                  latency_ms=round(elapsed_ms, 2))

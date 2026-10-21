@@ -1,4 +1,4 @@
-"""Phase 2: engineered pair-similarity features. Writes results/features.json."""
+"""Step 2: add pair-similarity features. Saves results/features.json."""
 import json
 from pathlib import Path
 
@@ -6,33 +6,55 @@ import scipy.sparse as sp
 from sklearn.feature_extraction.text import TfidfVectorizer
 from xgboost import XGBClassifier
 
-from plag.data import SEED, load, split
-from plag.features import NAMES, PairFeatures
-from train_baseline import score, text
+from plag.data import SEED, load_data, split_data
+from plag.features import FEATURE_NAMES, PairFeatures
+from train_baseline import evaluate, make_text
 
-OUT = Path(__file__).parent / "results"
+RESULTS_DIR = Path(__file__).parent / "results"
+
+
+def new_xgb():
+    return XGBClassifier(n_estimators=300, max_depth=6, eval_metric="logloss", random_state=SEED)
+
 
 if __name__ == "__main__":
-    train, val, test = split(load())
-    pf = PairFeatures().fit(train)
-    Ftr, Fva, Fte = (pf.transform(d) for d in (train, val, test))
-    ytr, yva, yte = train["label"], val["label"], test["label"]
+    train, val, test = split_data(load_data())
+    y_train, y_val, y_test = train["label"], val["label"], test["label"]
 
-    vec = TfidfVectorizer()
-    Ttr = vec.fit_transform(text(train))
-    Tva, Tte = vec.transform(text(val)), vec.transform(text(test))
+    # the 9 pair features
+    pair_features = PairFeatures().fit(train)
+    F_train = pair_features.transform(train)
+    F_val = pair_features.transform(val)
+    F_test = pair_features.transform(test)
 
-    xgb = lambda: XGBClassifier(n_estimators=300, max_depth=6, eval_metric="logloss", random_state=SEED)
-    sets = {
-        "pair_features_xgb": (xgb(), Ftr, Fva, Fte),
-        "pair_features+tfidf_xgb": (xgb(), sp.hstack([Ftr, Ttr]).tocsr(), sp.hstack([Fva, Tva]).tocsr(), sp.hstack([Fte, Tte]).tocsr()),
+    # the tf-idf text features from step 1
+    vectorizer = TfidfVectorizer()
+    T_train = vectorizer.fit_transform(make_text(train))
+    T_val = vectorizer.transform(make_text(val))
+    T_test = vectorizer.transform(make_text(test))
+
+    # (model, train data, val data, test data) for each experiment
+    experiments = {
+        "pair_features_xgb": (new_xgb(), F_train, F_val, F_test),
+        "pair_features+tfidf_xgb": (
+            new_xgb(),
+            sp.hstack([F_train, T_train]).tocsr(),
+            sp.hstack([F_val, T_val]).tocsr(),
+            sp.hstack([F_test, T_test]).tocsr(),
+        ),
     }
-    res = {"features": NAMES, "val": {}}
-    for name, (m, a, b, _) in sets.items():
-        m.fit(a, ytr)
-        res["val"][name] = score(m, b, yva)
-        print(name, {k: round(v, 4) for k, v in res["val"][name].items()}, flush=True)
-    best = max(res["val"], key=lambda k: res["val"][k]["acc"])
-    res["best"], res["test"] = best, score(sets[best][0], sets[best][3], yte)
-    print("BEST", best, res["test"])
-    (OUT / "features.json").write_text(json.dumps(res, indent=2))
+
+    results = {"features": FEATURE_NAMES, "val": {}}
+    for name, (model, X_train, X_val, X_test) in experiments.items():
+        model.fit(X_train, y_train)
+        results["val"][name] = evaluate(model, X_val, y_val)
+        print(name, results["val"][name], flush=True)
+
+    # pick on validation, test once
+    best = max(results["val"], key=lambda name: results["val"][name]["acc"])
+    best_model, _, _, best_X_test = experiments[best]
+    results["best"] = best
+    results["test"] = evaluate(best_model, best_X_test, y_test)
+    print("best:", best, results["test"])
+
+    (RESULTS_DIR / "features.json").write_text(json.dumps(results, indent=2))
